@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Zombie Shooter</title>
+  <style>
+    body {
+      overflow: hidden;
+      margin: 0;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    canvas {
+      border: 2px solid #000;
+      display: none;
+      touch-action: none; /* Disabilita lo scrolling e lo zoom sulla canvas */
+    }
+
+    #startButton {
+      width: 200px;
+      height: 50px;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <button id="startButton">Play</button>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startButton = document.getElementById('startButton');
+
+    let playerX = canvas.width / 2;
+    const playerY = canvas.height - 50;
+    const playerRadius = 10;
+    let isGameOver = false;
+    let score = 0;
+    let gameStarted = false;
+
+    let bullets = [];
+    let obstacles = [];
+
+    function drawPlayer() {
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(playerX, playerY, playerRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawBullets() {
+      ctx.fillStyle = '#0000ff';
+      bullets.forEach(bullet => {
+        ctx.fillRect(bullet.x, bullet.y, 5, 10);
+      });
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = '#fff';
+      obstacles.forEach(obstacle => {
+        ctx.fillRect(obstacle.x, obstacle.y, 15, 15);
+      });
+    }
+
+    function moveBullets() {
+      bullets = bullets.filter(bullet => bullet.y > 0);
+      bullets.forEach(bullet => {
+        bullet.y -= 5;
+      });
+    }
+
+    function moveObstacles() {
+      obstacles.forEach(obstacle => {
+        obstacle.y += 2; // Movimento verso il basso degli ostacoli
+        if (obstacle.y > canvas.height) {
+          obstacles.splice(obstacles.indexOf(obstacle), 1);
+        }
+      });
+      if (obstacles.some(obstacle => obstacle.y >= canvas.height - 15)) {
+        isGameOver = true; // Se un ostacolo tocca il fondo, il gioco termina
+      }
+    }
+
+    function drawScore() {
+      ctx.fillStyle = '#fff';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score: ${score}`, 10, 30);
+    }
+
+    function checkCollisions() {
+      bullets.forEach((bullet, bulletIndex) => {
+        obstacles.forEach((obstacle, obstacleIndex) => {
+          if (
+            bullet.x > obstacle.x &&
+            bullet.x < obstacle.x + 15 &&
+            bullet.y > obstacle.y &&
+            bullet.y < obstacle.y + 15
+          ) {
+            bullets.splice(bulletIndex, 1);
+            obstacles.splice(obstacleIndex, 1);
+            score++;
+          }
+        });
+      });
+    }
+
+    function gameLoop() {
+      if (!isGameOver && gameStarted) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawPlayer();
+        drawBullets();
+        drawObstacles();
+        drawScore();
+
+        moveBullets();
+        moveObstacles();
+        checkCollisions();
+
+        requestAnimationFrame(gameLoop);
+      } else {
+        ctx.fillStyle = '#fff';
+        ctx.font = '30px Arial';
+        ctx.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2);
+      }
+    }
+
+    canvas.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      if (!isGameOver && gameStarted) {
+        const touchX = event.touches[0].clientX - canvas.getBoundingClientRect().left;
+        playerX = Math.max(playerRadius, Math.min(canvas.width - playerRadius, touchX));
+      }
+    });
+
+    startButton.addEventListener('click', () => {
+      startButton.style.display = 'none';
+      canvas.style.display = 'block';
+      gameStarted = true;
+      gameLoop();
+      setInterval(() => {
+        bullets.push({ x: playerX, y: playerY - playerRadius });
+      }, 1); // Aggiunge un colpo blu ogni millisecondo automaticamente
+      setInterval(() => {
+        if (obstacles.length < 10) { // Aggiunge massimo 10 ostacoli alla volta
+          obstacles.push({ x: Math.random() * (canvas.width - 15), y: 0 });
+        }
+      }, 1000); // Aggiunge un ostacolo ogni secondo dall'alto verso il basso
+    });
+  </script>
+</body>
+</html>
